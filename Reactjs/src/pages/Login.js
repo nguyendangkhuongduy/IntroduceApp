@@ -1,9 +1,11 @@
-import { Button } from "bootstrap";
+
 import { useState } from "react";
-import { Form } from "react-bootstrap";
-import Apis, { endpoints } from "../configs/Apis";
+import { Form, Button } from "react-bootstrap";
+import Apis, { endpoints, authApi } from "../configs/Apis";
 import { useDispatch } from "react-redux"
-import { useHistory } from "react"
+// import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+// import useHistory from 'react-router-dom'
 import loginUser from "../ActionCreator/UserCreater";
 import cookies from "react-cookies";
 
@@ -12,7 +14,7 @@ export default function Login () {
     const [username, setUserName] = useState()
     const [password, setPassWord] = useState()
     const dispatch = useDispatch()
-    const history = useHistory()
+    const history = useNavigate()
 
     const login = async (event) => {
         event.preventDefault()
@@ -30,39 +32,40 @@ export default function Login () {
             // localStorage.setItem("accesss_token", res.data.access_token)
             cookies.save("accesss_token", res.data.access_token)
 
-            let user = await Apis.get(endpoints['current-user'], {
-                headers: {
-                    'Authorization': `Bearer ${cookies.load("access_token")}`
-                }
-            })
+            let user = await authApi().get(endpoints['current-user'])
+            // , {
+            //     headers: {
+            //         'Authorization': `Bearer ${cookies.load("access_token")}`
+            //     }
+            // })
 
             console.info(user)
 
             // localStorage.setItem("user", user.data)
             cookies.save("user", user.data)
 
-            // dispatch({
-            //     "type": "USER_LOGIN",
-            //     "payload": user.data
-            // })
+            dispatch({
+                "type": "USER_LOGIN",
+                "payload": user.data
+            })
 
             dispatch(loginUser(user.data))
-            // dispatch({
-            //     'type': 'login',
-            //     'payload': user.data
-            // })
+            dispatch({
+                'type': 'login',
+                'payload': user.data
+            })
 
-            history.push("/")
+            history("/home")
 
         } catch(err) {
-            console.info(err)
+             console.info(err)
         }
-    }
+     }
 
     return (
         <>
             <h1 className="text-center text-danger">LOG IN</h1>
-
+            
             <Form onSubmit={login}>
                 <Form.Group className="mb-3" controlId="formBasicEmail">
                     <Form.Label>User name</Form.Label>
@@ -80,9 +83,7 @@ export default function Login () {
                                   onChange={(event) => setPassWord(event.target.value)} />
                 </Form.Group>
                
-                <Button variant="primary" type="submit">
-                    Log In
-                </Button>
+                <Button variant="primary" type="text"> Log In </Button>
             </Form>
 
         </>

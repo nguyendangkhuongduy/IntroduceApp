@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'drf_yasg',
     'ckeditor',
     'ckeditor_uploader',
-    'oauth2_provider'
+    'oauth2_provider',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
@@ -53,11 +54,20 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'introductionapp.urls'
 
 AUTH_USER_MODEL = 'introduction.User'
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_CREDENTIALS = True
+
+INSTALLED_IPS = [
+    '127.0.0.1'
+]
 
 TEMPLATES = [
     {
@@ -84,7 +94,7 @@ WSGI_APPLICATION = 'introductionapp.wsgi.application'
 DATABASES = {
     'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'jobportalsystemdb',
+            'NAME': 'jobdb',
             'USER': 'root',
             'PASSWORD': 'duy24012001duy',
             'HOST': ''
@@ -98,7 +108,11 @@ CKEDITOR_UPLOAD_PATH = "candidate/"
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
-    )
+    ),
+
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+    ]
 }
 
 OAUTH2_PROVIDER = {
@@ -149,8 +163,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 OAUTH2_INFO = {
-    "client_id": "duDQhQ97RtECzjvGy16Ti3o7H2JfUgiEHP0citI2",
-    "client_secret": "Gt3KxvpwiIAyDEWtIGMh9zbMdR0Ns0Na650pStWyXTqUqoWPLXqMYXgI4ffDWy8ydYuzAkTxOXAOjMtNGwkm4hRBkpXC81Y4qkFLf6BtkzMk6smukZnS6hgJ6p5injDE"
+    "client_id": "bDmCwJUZ89Gu1Mc06AqRdbTUmc817nKj3Wb3Tjt5",
+    "client_secret": "7kCRLdlYqSlTBgVuXSwdqInxJ6MZTZuqTXKk1uG6gL49EzZWRjjSwTIZ08X35XK02RnLqNFa5HEH2QmXqNo6CHOlb9NH0KE18U1OAt05FOot8nqYkfvHTZRYxcAhyu8W",
 }
 
 

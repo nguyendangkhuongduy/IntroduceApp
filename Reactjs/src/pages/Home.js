@@ -2,12 +2,12 @@ import { useState } from "react"
 import { useEffect } from "react"
 import { Row } from "react-bootstrap"
 import Apis, { endpoints } from "../configs/Apis"
-// import Apis, { endpoints } from "../configs/Apis"
-import FormIntroduc from "../layout/FromIntroduc"
+import FontRecruitment from "../layout/FontRecruitment"
+
 
 
 export default function Home () {
-    const [recruitment, setRecruitment] = useState()
+    const [recruitment, setRecruitment] = useState([])
 
 
     useEffect(() => {
@@ -25,15 +25,11 @@ export default function Home () {
 
     return (
         <>
-            <h1 className="text-center text-danger">ALL JOBS</h1>
-            {/* <Row>
-                {recruitment.map(c => <FormIntroduc obj={c} />)}
-            </Row> */}
-
-            {/* {recruitment.map(c =>
-                    {
-                        return <FormIntroduc image={c.image} name={c.name} created_date={c.created_date} />
-                    })} */}
+            <h1 className="text-center text-danger">ALL Company</h1>
+            <Row>
+                {recruitment.map(d => <FontRecruitment obj={d} />)}
+                
+            </Row>        
                      
         </>
     )

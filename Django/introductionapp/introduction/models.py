@@ -18,25 +18,19 @@ class User(AbstractUser):
 
 
 class ItemBase(models.Model):
-    created_date = models.DateTimeField(auto_now_add=True)
-    updated_date = models.DateTimeField(auto_now=True)
+    created_date = models.DateField(auto_now_add=True)
+    updated_date = models.DateField(auto_now=True)
     active = models.BooleanField(default=True)
 
     class Meta:
         abstract = True
 
 
-# class CVOnline(ItemBase):
-#     # intro = RichTextField()
-#     from_salary = models.DecimalField(default=0, decimal_places=2, max_digits=10)
-#     to_salary = models.DecimalField(default=0, decimal_places=2, max_digits=10)
-#     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-
 class Address(models.Model):
-    address = models.CharField(max_length=30)
+    name = models.CharField(max_length=30)
 
     def __str__(self):
-        return self.address
+        return self.name
 
 
 class Salary(models.Model):
@@ -60,16 +54,25 @@ class Experience(models.Model):
         return self.number
 
 
+class Tag(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Employer(ItemBase):
     name = models.CharField(max_length=100, null=False, unique=True)
-    description = RichTextField()
+    description = RichTextField(null=True)
     phone_number = models.CharField(max_length=15, null=False)
     email = models.CharField(max_length=100, null=False, unique=True)
-    address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True)
+    address_details = models.CharField(max_length=100, null=False, blank=True)
+    address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, related_name='employer')
     image = models.ImageField(null=True, upload_to='employer/%Y/%m')
-    recruiter = models.OneToOneField('User', on_delete=models.CASCADE, related_name='employer')
-    commenter = models.ManyToManyField('User', through='Comment', related_name='employer_comment')
-    rater = models.ManyToManyField('User', through='Rating',  related_name='employer_rating')
+
+    recruiter = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employer')
+    commenter = models.ManyToManyField(User, through='Comment', related_name='employer_comment')
+    rater = models.ManyToManyField(User, through='Rating',  related_name='employer_rating')
 
     def __str__(self):
         return self.name
@@ -77,65 +80,25 @@ class Employer(ItemBase):
 
 # tin tuyen dung
 class Recruitment(ItemBase):
-    class Meta:
-        ordering = ["-created_date"]
-
-    # content = models.CharField(max_length=200, null=False)
     content = RichTextField()
     title = models.CharField(max_length=100, null=False)
     contact_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15)
     email = models.CharField(max_length=100)
     image = models.ImageField(null=True, upload_to='recruitment/%Y/%m')
+
     employer = models.ForeignKey(Employer, related_name='recruitment', on_delete=models.CASCADE)
-    salary = models.ForeignKey(Salary, on_delete=models.SET_NULL, null=True,
-                               related_name='recruitment')
+    salary = models.ForeignKey(Salary, on_delete=models.SET_NULL, null=True, related_name='recruitment')
     address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, related_name='recruitment')
     career = models.ForeignKey(Career, on_delete=models.SET_NULL, null=True, related_name='recruitment')
-    experience = models.ForeignKey(Experience, on_delete=models.SET_NULL,
-                                   null=True, related_name='recruitment')
-    tags = models.ManyToManyField('Tag', related_name='recruitment', blank=True)
+    experience = models.ForeignKey(Experience, on_delete=models.SET_NULL, null=True, related_name='recruitment')
+    tags = models.ManyToManyField(Tag)
 
     class Meta:
         ordering = ['-created_date', '-updated_date']
 
-
-# Hồ sơ của ứng viên
-class Profile(ItemBase):
-    full_name = models.CharField(max_length=100)
-    phone_number = models.CharField(max_length=15)
-    gender = models.CharField(max_length=20)
-    date_of_birth = models.DateTimeField(null=True, blank=True)
-    address = models.CharField(max_length=100)
-    skills = RichTextField(null=True, blank=True)
-
-    address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, related_name='profile')
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-#
-# # tieu chi ung tuyen
-# class Criteria(models.Model):
-#     name = models.CharField(max_length=200,  null=False)
-#     description = models.CharField(blank=True, null=True)
-#     recruitment = models.ManyToManyField('Recruitment', on_delete=models.CASCADE)
-#
-#
-# # Don ung tuyen
-# class Form(ItemBase):
-#     description = models.CharField(blank=True, null=True)
-#     curriculum_vitae = models.FileField(upload_to='uploads/%y/%m')
-#     user = models.ForeignKey('User', on_delete=models.CASCADE)
-#
-#
-# # Nop don ung tuyen
-# class ApplyForm(models.Model):
-#     date = models.DateField(auto_now_add=True)
-
-
-class Tag(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-
     def __str__(self):
-        return self.name
+        return self.title
 
 
 class ActionBase(ItemBase):
@@ -146,16 +109,26 @@ class ActionBase(ItemBase):
         abstract = True
 
 
+class Action(ActionBase):
+    LIKE, DISLIKE = range(2)
+    ACTIONS = [
+        (LIKE, 'like'),
+        (DISLIKE, 'dislike')
+    ]
+    type = models.PositiveSmallIntegerField(choices=ACTIONS, default=LIKE)
+
+
 class Like(ActionBase):
     active = models.BooleanField(default=False)
 
 
-class Rating(ItemBase):
+class Rating(ActionBase):
     rating = models.SmallIntegerField(default=5)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ratings')
-    employer = models.ForeignKey(Employer, on_delete=models.CASCADE, related_name='ratings')
+    # user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ratings')
+    # employer = models.ForeignKey(Employer, on_delete=models.CASCADE, related_name='ratings')
 
 
+# Comment
 class Comment(ItemBase):
     content = models.CharField(max_length=255)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
@@ -163,4 +136,86 @@ class Comment(ItemBase):
 
     def __str__(self):
         return self.content
+
+
+# Ung  vien
+# Hồ sơ của ứng viên
+class Profile(models.Model):
+    full_name = models.CharField(max_length=100)
+    phone_number = models.CharField(max_length=15)
+    gender = models.CharField(max_length=20)
+    date_of_birth = models.DateTimeField(null=True, blank=True)
+    address_details = models.CharField(max_length=100, blank=True, null=True)
+    skills = RichTextField(null=True, blank=True)
+
+    address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, related_name='profile')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+
+    def __str__(self):
+        return self.full_name
+
+
+class University(models.Model):
+    name = models.CharField(max_length=255, null=False)
+
+    def __str__(self):
+        return self.name
+
+
+# Trinh do cua ung vien
+class EducationProfile(models.Model):
+    degree = models.CharField(max_length=255)
+    major = models.CharField(max_length=255)
+    time_start = models.DateTimeField()
+    time_completed = models.DateTimeField()
+    description = RichTextField(null=True, blank=True)
+
+    university_name = models.ForeignKey(University, on_delete=models.SET_NULL, null=True)
+    profile = models.OneToOneField(Profile, on_delete=models.CASCADE, related_name='education')
+
+    def __str__(self):
+        return self.major
+
+
+# Kinh nghiem cua Ung vien
+
+class ExperienceProfile(models.Model):
+    job = models.CharField(max_length=100)
+    position = models.CharField(max_length=255)
+    time_start = models.DateTimeField()
+    time_end = models.DateTimeField()
+    company_name = models.CharField(max_length=255)
+    description = RichTextField(null=True)
+
+    profile = models.OneToOneField(Profile, on_delete=models.CASCADE, related_name='experience')
+
+    def __str__(self):
+        return self.job
+
+
+# CV cua Ung Vien
+class CVOnline(ItemBase):
+    intro = RichTextField()
+    from_salary = models.DecimalField(default=0, decimal_places=2, max_digits=10)
+    to_salary = models.DecimalField(default=0, decimal_places=2, max_digits=10)
+
+    profile = models.OneToOneField(Profile, on_delete=models.CASCADE, related_name='cv')
+
+
+# View
+class BaseView(ItemBase):
+    view = models.IntegerField(default=0)
+
+    class Meta:
+        abstract = True
+
+
+class ViewEmployer(BaseView):
+    employer = models.OneToOneField(Employer, related_name='view', on_delete=models.CASCADE)
+
+
+class ViewProfile(BaseView):
+    profile = models.OneToOneField(Profile, related_name='view', on_delete=models.CASCADE)
+
+
 

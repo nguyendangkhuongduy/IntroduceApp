@@ -1,10 +1,22 @@
 import { Navbar, Container, Nav } from "react-bootstrap";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import cookies from "react-cookies";
+import { logoutUser } from "../ActionCreator/UserCreater";
 
 export default function Header () {
 
     const user = useSelector(state => state.user.user)
+
+    const dispatch = useDispatch()
+
+    const logout = (event) => {
+        event.preventDefault()
+
+        cookies.remove("access_token")
+        cookies.remove("user")
+        dispatch(logoutUser())
+    }
 
 
 
@@ -15,11 +27,14 @@ export default function Header () {
     //     path =  <Link className="nav-link text-danger" to="/">Log out</Link> 
     // }
 
-    let btn = <Link to="/login" className="nav-link text-danger">Dang nhap</Link>
+    let btn = <>
+            <Link to="/login" className="nav-link text-danger">Dang nhap</Link>
+            <Link to="/resgister" className="nav-link text-danger">Dang ky</Link>
+    </>
     if (user != null)
         btn = <>
-            <Link to="/" className="nav-link text-danger">{user.username}</Link>
-            <a href="#" className="nav-link text-danger">Dang xuat</a>
+            <Link to="/home" className="nav-link text-danger">{user.username}</Link>
+            <Link to="/home" className="nav-link text-danger" onClick={logout}>Dang xuat</Link>
         </>
         
 
@@ -27,14 +42,15 @@ export default function Header () {
         <>
             <Navbar bg="light" expand="lg">
                 <Container>
-                    <Navbar.Brand href="#home">Information Teachnology</Navbar.Brand>
+                    {/* <Navbar className="nav-link" to="/">Information Teachnology</Navbar> */}
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
                     <Navbar.Collapse id="basic-navbar-nav">
                     <Nav className="me-auto">
-                        <Link className="nav-link" to="#home">News</Link>
-                        <Link className="nav-link" to="#link">Company</Link> 
+                        <Link className="nav-link" to="/employer">Information Teachnology</Link>
+                        <Link className="nav-link" to="/home">Company</Link> 
                         {/* {path} */}
                         {btn}
+                        
 
                     </Nav>
                     </Navbar.Collapse>

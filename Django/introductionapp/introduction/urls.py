@@ -12,8 +12,9 @@ router.register("address", views.AddressViewSet, 'address')
 router.register("experience", views.ExperienceViewSet, 'experience')
 router.register("career", views.CareerViewSet, 'career')
 router.register("tag", views.TagViewSet, 'tag')
+router.register("comments", views.CommentViewSet, 'comment')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('oauth2_info/', views.AuthInfo.as_view())
+    path('oauth2-info/', views.AuthInfo.as_view())
 ]

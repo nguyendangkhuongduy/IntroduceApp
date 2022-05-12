@@ -29,10 +29,10 @@ class SalaryAdmin(admin.ModelAdmin):
 
 
 class AddressAdmin(admin.ModelAdmin):
-    list_display = ['id', 'address']
-    list_display_links = ['address']
-    search_fields = ['address']
-    list_filter = ['id', 'address']
+    list_display = ['id', 'name']
+    list_display_links = ['name']
+    search_fields = ['name']
+    list_filter = ['id', 'name']
 
 
 class TagAdmin(admin.ModelAdmin):
@@ -87,3 +87,4 @@ admin.site.register(Salary, SalaryAdmin)
 admin.site.register(Address, AddressAdmin)
 admin.site.register(Experience, ExperienceAdmin)
 admin.site.register(Career, CareerAdmin)
+admin.site.register(Tag, TagAdmin)
