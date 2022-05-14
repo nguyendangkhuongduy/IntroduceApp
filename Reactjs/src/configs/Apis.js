@@ -12,7 +12,8 @@ export const endpoints = {
     "current-user": "/users/current-user/",
     "register": "/users/",
     "comments": (employerId) => `/employer/${employerId}/get-comment/` ,
-    "add-comment": (employerId) => `/employer/${employerId}/add-comment/`
+    "add-comment": (employerId) => `/employer/${employerId}/add-comment/`,
+    "add-recruitment": "/recruitment/"
     // "comments": (lessonId) => `/lesson/${lessonId}/comments/`,
     // "add-comment": (lessonId) => `/lesson/${lessonId}/add-comment/`
 }

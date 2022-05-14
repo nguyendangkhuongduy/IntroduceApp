@@ -35,6 +35,7 @@ export default function Header () {
         btn = <>
             <Link to="/home" className="nav-link text-danger">{user.username}</Link>
             <Link to="/home" className="nav-link text-danger" onClick={logout}>Dang xuat</Link>
+            <Link to="/recruitment" className="nav-link text-danger">Them Tin Tuyen Dung</Link>
         </>
         
 

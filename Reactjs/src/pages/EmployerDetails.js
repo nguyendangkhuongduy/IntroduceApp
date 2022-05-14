@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { useState } from "react"
-import { Col, Row, Spinner, Image, Form } from "react-bootstrap"
+import { Col, Row, Spinner, Image, Form, div } from "react-bootstrap"
 import { Link, useParams } from "react-router-dom"
 import Apis, { authApi, endpoints } from "../configs/Apis"
 import { Button } from "react-bootstrap";
@@ -107,11 +107,11 @@ export default function EmployerDetails () {
                 </Col>
             </Row>
             <hr/>
-            <div
+            {/* <div
                     dangerouslySetInnerHTML={{
                         __html: employer.description,
                     }}
-                />
+                > <div/> */}
 
             <hr>
             </hr>

@@ -8,6 +8,7 @@ import Recuitment from "../pages/Recuitment";
 import Footer from "./Footer";
 import Header from "./Header"
 import Resgister from "../pages/Resgister";
+import AddRecruitment from "../pages/AddRecruitment";
 // import Company from "../pages/Company";
 
 
@@ -26,6 +27,7 @@ export default
                     <Route path="/recruitment/:recruitmentId/" element={<RecruitmentDetails/>}/>
                     <Route path="/employer/:employerId/recruitment" element={<Recuitment/>} />
                     <Route path="/resgister" element={<Resgister/>} />
+                    <Route path="/recruitment" element={<AddRecruitment/>} />
                 </Routes>
 
                 <Footer />  
