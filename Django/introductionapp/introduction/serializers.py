@@ -3,6 +3,17 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
 from .models import Employer, Recruitment, User, Address, Experience, Salary, Career, Tag, Action, Rating,\
     ViewEmployer, ViewProfile, Profile, University, EducationProfile, ExperienceProfile, CVOnline, Comment
+from django.contrib.auth.models import Group
+from . import perms
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = ['id', 'name']
+        extra_kwargs = {
+            'name': {'validators': []},
+        }
 
 
 # Action
@@ -46,6 +57,8 @@ class RatingSerializer(ModelSerializer):
     #
     #     return user
 class UserSerializer(serializers.ModelSerializer):
+    groups = GroupSerializer(many=True)
+
     def get_avatar(self, obj):
         request = self.context['request']
         if obj.avatar and not obj.avatar.name.startswith("/static"):
@@ -55,15 +68,29 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "first_name", "last_name", "username", "password", "email", "avatar", "date_joined"]
+        fields = ["id", "first_name", "last_name", "username","groups", "password", "email", "avatar", "date_joined"]
 
         extra_kwargs = {
             'password': {'write_only': 'true'}
         }
 
+    # def create(self, validated_data):
+    #     user = User(**validated_data)
+    #     user.set_password(user.password)
+    #     user.save()
+    #
+    #     return user
+
     def create(self, validated_data):
-        user = User(**validated_data)
+        groups = validated_data.pop('groups')
+        g = groups[0]
+        group = Group.objects.filter(name=g.get('name')).first()
+
+        user = User.objects.create(**validated_data)
+        if not group.name == perms.recruiter_role:
+            user.is_active = True
         user.set_password(user.password)
+        user.groups.add(group)
         user.save()
 
         return user

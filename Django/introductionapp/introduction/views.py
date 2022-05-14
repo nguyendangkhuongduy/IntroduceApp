@@ -8,14 +8,18 @@ from drf_yasg.utils import swagger_auto_schema
 # from .perms import CommentOwnerPerms
 from rest_framework.views import APIView
 
-from .models import Employer, Recruitment, User, Career, Salary, Experience, Address, Tag, Action, Rating, Comment, ViewEmployer
+from .models import Employer, Recruitment, User, Career, Salary, Experience, Address, Tag, Action\
+    , Rating, Comment, ViewEmployer, Profile
 from .serializers import EmployerSerializer, RecruitmentSerializer, UserSerializer, CareerSerializer, \
     SalarySerializer, ExperienceSerializer, TagSerializer,\
-    AddressSerializer, ActionSerializer, RatingSerializer, CommentSerializer,  ViewEmployerSerializer
+    AddressSerializer, ActionSerializer, RatingSerializer, CommentSerializer,  ViewEmployerSerializer,\
+    ProfileSerializer
 from .paginator import BasePagination
 from django.conf import settings
 
 from django.db.models import F
+
+from . import perms
 
 
 # API lấy danh sách các nhà tuyển dụng
@@ -55,10 +59,16 @@ class EmployerViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveA
     queryset = Employer.objects.filter(active=True)
     serializer_class = EmployerSerializer
 
+    # def get_permissions(self):
+    #     if self.action in ['like', 'rating', 'add-comment', 'get-comment']:
+    #         return [permissions.IsAuthenticated()]
+    #
+    #     return [permissions.AllowAny()]
     def get_permissions(self):
-        if self.action in ['like', 'rating', 'add-comment', 'get-comment']:
-            return [permissions.IsAuthenticated()]
-
+        if self.action in ['add_comment', 'rating', 'like']:
+            return [perms.IsRecruiterUserUser()]
+        elif self.action in ['view']:
+            return [perms.IsEmployerUserUser()]
         return [permissions.AllowAny()]
 
     def get_queryset(self):
@@ -71,6 +81,10 @@ class EmployerViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveA
         e_id = self.request.query_params.get('id')
         if e_id is not None:
             employer = Employer.objects.filter(id=e_id)
+
+        kw = self.request.query_params.get('kw')
+        if kw:
+            employer = employer.filter(name__icontains=kw)
 
         return employer
 
@@ -136,24 +150,6 @@ class EmployerViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveA
 
 
 # API lấy tất cả các tin tuyển dụng
-class RecruitmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
-    pagination_class = BasePagination
-    serializer_class = RecruitmentSerializer
-
-    def get_queryset(self):
-        recruitment = Recruitment.objects.filter(active=True)
-
-        q = self.request.query_params.get('q')
-        if q is not None:
-            recruitment = Recruitment.objects.filter(title__icontains=q)
-
-        employ_id = self.request.query_params.get('employer_id')
-        if employ_id is not None:
-            recruitment = Recruitment.objects.filter(employer_id=employ_id)
-
-        return recruitment
-
-
 # API đăng ký người dùng
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True)
@@ -161,14 +157,121 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     parser_classes = [MultiPartParser, ]
 
     def get_permissions(self):
-        if self.action == 'get_current_user':
+        if self.action in ['get_current_user']:
             return [permissions.IsAuthenticated()]
-
+        elif self.action in ['get_profile']:
+            return [perms.IsRecruiterUser()]
         return [permissions.AllowAny()]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if request.data.get('groups')[0].get('name') not in [perms.IsEmployerUser, perms.recruiter_role]:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(methods=['get'], detail=False, url_path="current-user")
     def get_current_user(self, request):
         return Response(self.serializer_class(request.user).data, status=status.HTTP_200_OK)
+
+    @get_current_user.mapping.patch
+    def update_user(self, request):
+        user = request.user
+        data = request.data
+
+        username = data.get('username')
+        password = data.get('password')
+        email = data.get('email')
+        email_notification_active = data.get('email_notification_active')
+
+        if username:
+            user.username = username
+
+        if password:
+            user.set_password(password)
+
+        if email:
+            user.email = email
+
+        if email_notification_active:
+            user.email_notification_active = bool(email_notification_active)
+
+        try:
+            user.save()
+        except():
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response(data=self.serializer_class(user, context={'request': request}).data,
+                            status=status.HTTP_200_OK)
+
+    @action(methods=['get'], detail=True,
+            url_path='profile', url_name='get_profile')
+    def get_job_seeker_profile(self, request, pk):
+        job_seeker_profile = Profile.objects.filter(job_seeker=self.get_object()).first()
+        return Response(data=ProfileSerializer(job_seeker_profile, context={'request': request}).data,
+                        status=status.HTTP_200_OK)
+
+    # @action(methods=['get'], detail=True,
+    #         url_path='job-posts', url_name='get_job_posts')
+    # def get_job_posts(self, request, pk):
+    #     job_posts = JobPost.objects.filter(recruiter=self.get_object()).all()
+    #     return Response(data=JobPostSerializer(job_posts, many=True, context={'request': request}).data,
+    #                     status=status.HTTP_200_OK)
+    #
+    #
+    # @get_job_posts.mapping.post
+    # def add_job_posts(self, request, pk):
+    #     data = request.data
+    #     data['recruiter'] = self.get_object().id
+    #     serializer = JobPostSerializer(data=data)
+    #
+    #     if serializer.is_valid(raise_exception=True):
+    #         # save
+    #         serializer.save()
+    #         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RecruitmentViewSet(viewsets.ViewSet, generics.ListAPIView,
+                         generics.RetrieveAPIView,
+                         generics.CreateAPIView,
+                         generics.UpdateAPIView):
+    pagination_class = BasePagination
+    serializer_class = RecruitmentSerializer
+
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return [perms.JobPostOwnerPerms()]
+        return [permissions.AllowAny()]
+
+    def get_queryset(self):
+        queryset = self.queryset
+
+        recruitment_id = self.request.query_params.get('recruitment_id')
+        if recruitment_id:
+            queryset = queryset.filter(recruitment_id=recruitment_id)
+
+        career_id = self.request.query_params.get('career_id')
+        if career_id:
+            queryset = queryset.filter(career_id=career_id)
+
+        experience_id = self.request.query_params.get('experience_id')
+        if experience_id:
+            queryset = queryset.filter(experience_id=experience_id)
+
+        salary_id = self.request.query_params.get('salary_id')
+        if salary_id:
+            queryset = queryset.filter(salary_id=salary_id)
+
+        kw = self.request.query_params.get('kw')
+        if kw:
+            queryset = queryset.filter(title__icontains=kw)
+
+        return queryset
 
 
 class AuthInfo(APIView):
@@ -180,6 +283,11 @@ class CommentViewSet(viewsets.ViewSet, generics.DestroyAPIView, generics.UpdateA
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return [perms.IsRecruiterUser()]
+        return [permissions.IsAuthenticated()]
 
     def destroy(self, request, *args, **kwargs):
         if request.user == self.get_object().user:
