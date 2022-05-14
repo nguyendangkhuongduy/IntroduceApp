@@ -210,30 +210,56 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     @action(methods=['get'], detail=True,
             url_path='profile', url_name='get_profile')
-    def get_job_seeker_profile(self, request, pk):
-        job_seeker_profile = Profile.objects.filter(job_seeker=self.get_object()).first()
-        return Response(data=ProfileSerializer(job_seeker_profile, context={'request': request}).data,
+    def get_job_profile(self, request, pk):
+        profile = Profile.objects.filter(user=self.get_object()).first()
+        return Response(data=ProfileSerializer(profile, context={'request': request}).data,
                         status=status.HTTP_200_OK)
 
-    # @action(methods=['get'], detail=True,
-    #         url_path='job-posts', url_name='get_job_posts')
-    # def get_job_posts(self, request, pk):
-    #     job_posts = JobPost.objects.filter(recruiter=self.get_object()).all()
-    #     return Response(data=JobPostSerializer(job_posts, many=True, context={'request': request}).data,
-    #                     status=status.HTTP_200_OK)
-    #
-    #
-    # @get_job_posts.mapping.post
-    # def add_job_posts(self, request, pk):
-    #     data = request.data
-    #     data['recruiter'] = self.get_object().id
-    #     serializer = JobPostSerializer(data=data)
-    #
-    #     if serializer.is_valid(raise_exception=True):
-    #         # save
-    #         serializer.save()
-    #         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    @get_job_profile.mapping.post
+    def create_update_job_profile(self, request, pk):
+        profile = Profile.objects.filter(job_seeker=self.get_object()).first()
+        stt = None
+
+        if profile:
+            # update
+            serializer = ProfileSerializer(profile, data=request.data, partial=True)
+            stt = status.HTTP_200_OK
+        else:
+            # create
+            serializer = ProfileSerializer(data=request.data)
+            stt = status.HTTP_201_CREATED
+        if serializer.is_valid(raise_exception=True):
+            # save
+            serializer.save()
+            return Response(data=serializer.data, status=stt)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['get'], detail=True,
+            url_path='company', url_name='get_company')
+    def get_company(self, request, pk):
+        company = Employer.objects.filter(recruiter=self.get_object()).first()
+        return Response(data=EmployerSerializer(company, context={'request': request}).data,
+                        status=status.HTTP_200_OK)
+
+    @get_company.mapping.post
+    def create_or_update_company(self, request, pk):
+        company = Employer.objects.filter(recruiter=self.get_object()).first()
+        stt = None
+        data = request.data
+        data['recruitment'] = self.get_object().id
+        if company:
+            # update
+            serializer = EmployerSerializer(company, data=data, partial=True)
+            stt = status.HTTP_200_OK
+        else:
+            # create
+            serializer = EmployerSerializer(data=data)
+            stt = status.HTTP_201_CREATED
+        if serializer.is_valid(raise_exception=True):
+            # save
+            serializer.save()
+            return Response(data=serializer.data, status=stt)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RecruitmentViewSet(viewsets.ViewSet, generics.ListAPIView,
@@ -251,21 +277,21 @@ class RecruitmentViewSet(viewsets.ViewSet, generics.ListAPIView,
     def get_queryset(self):
         queryset = self.queryset
 
-        recruitment_id = self.request.query_params.get('recruitment_id')
-        if recruitment_id:
-            queryset = queryset.filter(recruitment_id=recruitment_id)
-
         career_id = self.request.query_params.get('career_id')
         if career_id:
             queryset = queryset.filter(career_id=career_id)
 
-        experience_id = self.request.query_params.get('experience_id')
-        if experience_id:
-            queryset = queryset.filter(experience_id=experience_id)
+        recruitment_id = self.request.query_params.get('recruitment_id')
+        if recruitment_id:
+            queryset = queryset.filter(recruitment_id=recruitment_id)
 
         salary_id = self.request.query_params.get('salary_id')
         if salary_id:
             queryset = queryset.filter(salary_id=salary_id)
+
+        experience_id = self.request.query_params.get('experience_id')
+        if experience_id:
+            queryset = queryset.filter(experience_id=experience_id)
 
         kw = self.request.query_params.get('kw')
         if kw:
