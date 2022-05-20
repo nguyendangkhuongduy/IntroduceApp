@@ -1,46 +1,3 @@
-// import { useState } from "react"
-// import { useEffect } from "react"
-// import Apis, { endpoints } from "../configs/Apis"
-// import FontCompany from "../layout/FontCompany"
-
-
-
-// export default function Company () {
-//     const [employer, setEmployer] = useState([])
-
-
-//     useEffect(() => {
-//         let loadEmployer = async () => {
-//             try {
-//                 let res = await Apis.get(endpoints['recruitment'])
-//                 setEmployer(res.data.results)
-//             } catch(err) {
-//                 console.error(err)
-//             }      
-//         } 
-//         loadEmployer()
-        
-//     }, [])
-
-//     return (
-//         <>
-//             <h1 className="text-center text-danger">ALL Jobs</h1>
-
-//             <Row>
-//                 {employer.map(c => <FontCompany obj={c} />)}
-                
-//             </Row>
-            
-
-//             {/* {recruitment.map(c =>
-//                     {
-//                         return <FormIntroduc image={c.image} name={c.name} created_date={c.created_date} />
-//                     })} */}
-                     
-//         </>
-//     )
-// }
-
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -59,6 +16,7 @@ const Company = () => {
     const [employer, setEmployer] = useState([]);
     const [pagination, setPagination] = useState({ count: 0, sizeNumber: 0 });
     const [page, setPage] = useState(1);
+    const [change, SetChange] = useState(1);
   
     useEffect(() => {
       const loadEmployer = async () => {
@@ -72,6 +30,7 @@ const Company = () => {
           const data = await res.data;
   
           setEmployer(data.results);
+          SetChange(employer.count)
           setPagination({
             count: data.count,
             sizeNumber: Math.ceil(data.count / 2),
@@ -82,7 +41,7 @@ const Company = () => {
         }
       };
       loadEmployer();
-    }, [q, page]);
+    }, [q, page, change]);
   
     const handleChangePage = (event, value) => {
       setPage(value);
@@ -94,19 +53,6 @@ const Company = () => {
         ", is loading: " +
         isLoadingJobPosts
     );
-
-    // useEffect(() => {
-    //             let loadEmployer = async () => {
-    //                 try {
-    //                     let res = await Apis.get(endpoints['recruitment'])
-    //                     setEmployer(res.data.results)
-    //                 } catch(err) {
-    //                     console.error(err)
-    //                 }      
-    //             } 
-    //             loadEmployer()
-                
-    //         }, [])
   
     return (
       <Box>
@@ -121,11 +67,6 @@ const Company = () => {
         </Typography>
         <Box>
           <Grid container spacing={2}>
-            {/* isLoadingJobPosts && jobPosts.length === 0 ? ( */} 
-            {/* //   
-            // ) : jobPosts.length === 0 ? (
-            //   <CardSearchNoResult description="Không tìm thấy bản tin tuyển dụng nào!" />
-            // ) : (  */}
                 <><h1 className="text-center">ALL Jobs</h1><Row>
                                     {employer.map(c => <FontCompany obj={c} />)}
                                 </Row></>

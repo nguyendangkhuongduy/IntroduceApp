@@ -13,6 +13,7 @@ router.register("experience", views.ExperienceViewSet, 'experience')
 router.register("career", views.CareerViewSet, 'career')
 router.register("tag", views.TagViewSet, 'tag')
 router.register("comments", views.CommentViewSet, 'comment')
+router.register("profile", views.ProfileViewSet, 'profile')
 
 urlpatterns = [
     path('', include(router.urls)),

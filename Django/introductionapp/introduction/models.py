@@ -3,15 +3,11 @@ from django.contrib.auth.models import AbstractUser
 from ckeditor.fields import RichTextField
 
 
-class Role(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-
-    def __str__(self):
-        return self.name
-
-
+#1: ung vien
+#2: nha tuyen dung
 class User(AbstractUser):
     avatar = models.ImageField(null=True, upload_to='users/%Y/%m')
+    Role = models.CharField(max_length=5, default=1)
 
     def __str__(self):
         return self.username
@@ -82,6 +78,7 @@ class Employer(ItemBase):
 class Recruitment(ItemBase):
     content = RichTextField()
     title = models.CharField(max_length=100, null=False)
+    number = models.CharField(max_length=100, default=1)
     contact_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15)
     email = models.CharField(max_length=100)
@@ -124,8 +121,6 @@ class Like(ActionBase):
 
 class Rating(ActionBase):
     rating = models.SmallIntegerField(default=5)
-    # user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ratings')
-    # employer = models.ForeignKey(Employer, on_delete=models.CASCADE, related_name='ratings')
 
 
 # Comment
@@ -133,6 +128,9 @@ class Comment(ItemBase):
     content = models.CharField(max_length=255)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
     company = models.ForeignKey(Employer, on_delete=models.CASCADE, related_name='comments')
+
+    class Meta:
+        ordering = ['-created_date']
 
     def __str__(self):
         return self.content
@@ -144,7 +142,7 @@ class Profile(models.Model):
     full_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15)
     gender = models.CharField(max_length=20)
-    date_of_birth = models.DateTimeField(null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
     address_details = models.CharField(max_length=100, blank=True, null=True)
     skills = RichTextField(null=True, blank=True)
 
@@ -166,28 +164,29 @@ class University(models.Model):
 class EducationProfile(models.Model):
     degree = models.CharField(max_length=255)
     major = models.CharField(max_length=255)
-    time_start = models.DateTimeField()
-    time_completed = models.DateTimeField()
+    time_start = models.DateField()
+    time_completed = models.DateField()
     description = RichTextField(null=True, blank=True)
 
     university_name = models.ForeignKey(University, on_delete=models.SET_NULL, null=True)
     profile = models.OneToOneField(Profile, on_delete=models.CASCADE, related_name='education')
+    # user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='education')
 
     def __str__(self):
         return self.major
 
 
 # Kinh nghiem cua Ung vien
-
 class ExperienceProfile(models.Model):
     job = models.CharField(max_length=100)
     position = models.CharField(max_length=255)
-    time_start = models.DateTimeField()
-    time_end = models.DateTimeField()
+    time_start = models.DateField()
+    time_end = models.DateField()
     company_name = models.CharField(max_length=255)
     description = RichTextField(null=True)
 
     profile = models.OneToOneField(Profile, on_delete=models.CASCADE, related_name='experience')
+    # user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='experience')
 
     def __str__(self):
         return self.job
@@ -195,11 +194,14 @@ class ExperienceProfile(models.Model):
 
 # CV cua Ung Vien
 class CVOnline(ItemBase):
-    intro = RichTextField()
-    from_salary = models.DecimalField(default=0, decimal_places=2, max_digits=10)
-    to_salary = models.DecimalField(default=0, decimal_places=2, max_digits=10)
+    title = models.CharField(max_length=255, default="Title")
+    cv = models.FileField(null=True, upload_to='CV/%Y/%m')
 
     profile = models.OneToOneField(Profile, on_delete=models.CASCADE, related_name='cv')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cv')
+
+    def __str__(self):
+        return self.title
 
 
 # View

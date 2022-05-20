@@ -13,9 +13,14 @@ export const endpoints = {
     "register": "/users/",
     "comments": (employerId) => `/employer/${employerId}/get-comment/` ,
     "add-comment": (employerId) => `/employer/${employerId}/add-comment/`,
-    "add-recruitment": "/recruitment/"
-    // "comments": (lessonId) => `/lesson/${lessonId}/comments/`,
-    // "add-comment": (lessonId) => `/lesson/${lessonId}/add-comment/`
+    "rating": (employerId) => `/employer/${employerId}/rating/`,
+    "company_user": (userId) => `/users/${userId}/company/`,
+    "profile": (userId) => `/users/${userId}/profile/`,
+    "education": (profileId) => `/profile/${profileId}/education/`,
+    "experience": (profileId) => `/profile/${profileId}/experience/`,
+    "cv": (userId) => `/users/${userId}/cv/`,
+    "delete_recruitment": (recruitmentId) => `/recruitment/${recruitmentId}/`,
+    "delete_employer": (employerId) => `/employer/${employerId}/`
 }
 
 
@@ -23,7 +28,7 @@ export const authApi = () => {
     return axios.create({
         baseURL: "http://127.0.0.1:8000/",
         headers: {
-            Authorization: `Bearer sFLxOyBKHk88KhuWrZm6gCygTNQCKW`
+            Authorization: `Bearer lXoxSOjCuAZ6w23HtV7kZeTGp0DS6D`
         }
     })
 }
@@ -31,3 +36,5 @@ export const authApi = () => {
 export default axios.create({
     baseURL: "http://127.0.0.1:8000/"
 })
+
+// qfk1z1sbGxFoNcNEktQPGzD8EDPtK7

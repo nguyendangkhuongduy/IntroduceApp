@@ -1,3 +1,5 @@
+import profile
+
 from django.shortcuts import render
 from rest_framework import viewsets, generics, status, permissions, mixins
 from rest_framework.decorators import action, permission_classes
@@ -9,11 +11,11 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.views import APIView
 
 from .models import Employer, Recruitment, User, Career, Salary, Experience, Address, Tag, Action\
-    , Rating, Comment, ViewEmployer, Profile
+    , Rating, Comment, ViewEmployer, Profile, University, ExperienceProfile, EducationProfile, CVOnline
 from .serializers import EmployerSerializer, RecruitmentSerializer, UserSerializer, CareerSerializer, \
     SalarySerializer, ExperienceSerializer, TagSerializer,\
     AddressSerializer, ActionSerializer, RatingSerializer, CommentSerializer,  ViewEmployerSerializer,\
-    ProfileSerializer
+    ProfileSerializer, EmployerDetailsSerializer, EducationProfileSerializer, ExperienceProfileSerializer, CVOnlineSerializer
 from .paginator import BasePagination
 from django.conf import settings
 
@@ -44,39 +46,23 @@ class AddressViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
 
-    # @action(methods=['get'], detail=True, url_path='address')
-    # def get_address(self, request, pk):
-    #     districts = Address.objects.filter(city=self.get_object()).all()
-    #     return Response(data=AddressSerializer(districts, many=True, ).data, status=status.HTTP_200_OK)
-
 
 class TagViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
 
 
-class EmployerViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+class EmployerViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView, generics.DestroyAPIView):
     queryset = Employer.objects.filter(active=True)
     serializer_class = EmployerSerializer
 
-    # def get_permissions(self):
-    #     if self.action in ['like', 'rating', 'add-comment', 'get-comment']:
-    #         return [permissions.IsAuthenticated()]
-    #
-    #     return [permissions.AllowAny()]
     def get_permissions(self):
-        if self.action in ['add_comment', 'rating', 'like']:
-            return [perms.IsRecruiterUserUser()]
-        elif self.action in ['view']:
-            return [perms.IsEmployerUserUser()]
+        if self.action in ['add-comment', 'rating', 'like']:
+            return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
 
     def get_queryset(self):
-        employer = Employer.objects.filter(active=True)
-
-        q = self.request.query_params.get('q')
-        if q is not None:
-            employer = Employer.objects.filter(name__icontains=q)
+        employer = self.queryset
 
         e_id = self.request.query_params.get('id')
         if e_id is not None:
@@ -92,7 +78,15 @@ class EmployerViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveA
     def get_recruitment(self, request, pk):
         employ = Employer.objects.get(pk=pk)
         recruitment = employ.recruitment.filter(active=True)
-        return Response(RecruitmentSerializer(recruitment, many=True).data, status=status.HTTP_200_OK)
+        return Response(RecruitmentSerializer(recruitment, context={'request': request}, many=True).data, status=status.HTTP_200_OK)
+
+    @action(methods=['post'], detail=True, url_path='add_recruitment')
+    def add_recruitment(self, request, pk):
+        content = request.data.get('content')
+        employ = Employer.objects.get(pk=pk)
+        recruitment = employ.recruitment.filter(active=True)
+        return Response(RecruitmentSerializer(recruitment, context={'request': request}, many=True).data,
+                        status=status.HTTP_200_OK)
 
     @action(methods=['post'], detail=True, url_path='like')
     def take_like(self, request, pk):
@@ -132,11 +126,6 @@ class EmployerViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveA
 
         return Response(data=CommentSerializer(comments, many=True, context={'request': request}).data,
                         status=status.HTTP_200_OK)
-        # company = self.get_object()
-        # comments = company.comments.select_related('user').filter(active=True)
-        #
-        # return Response(CommentSerializer(comments, many=True).data,
-        #                 status=status.HTTP_200_OK)
 
     @action(methods=['get'], detail=True, url_path='view')
     def inc_view(self, request, pk):
@@ -151,32 +140,27 @@ class EmployerViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveA
 
 # API lấy tất cả các tin tuyển dụng
 # API đăng ký người dùng
-class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
+class UserViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.UpdateAPIView):
     queryset = User.objects.filter(is_active=True)
     serializer_class = UserSerializer
     parser_classes = [MultiPartParser, ]
 
+    def get_parsers(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return []
+        return super().get_parsers()
+
     def get_permissions(self):
-        if self.action in ['get_current_user']:
+        if self.action in ['current_user']:
             return [permissions.IsAuthenticated()]
-        elif self.action in ['get_profile']:
-            return [perms.IsRecruiterUser()]
+        elif self.action in ['get_profile', 'cv']:
+            return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        if request.data.get('groups')[0].get('name') not in [perms.IsEmployerUser, perms.recruiter_role]:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(methods=['get'], detail=False, url_path="current-user")
     def get_current_user(self, request):
-        return Response(self.serializer_class(request.user).data, status=status.HTTP_200_OK)
+        return Response(self.serializer_class(request.user, context={'request': request}).data,
+                        status=status.HTTP_200_OK)
 
     @get_current_user.mapping.patch
     def update_user(self, request):
@@ -184,9 +168,16 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         data = request.data
 
         username = data.get('username')
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
         password = data.get('password')
         email = data.get('email')
-        email_notification_active = data.get('email_notification_active')
+
+        if first_name:
+            user.first_name = first_name
+
+        if last_name:
+            user.last_name = last_name
 
         if username:
             user.username = username
@@ -196,9 +187,6 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
         if email:
             user.email = email
-
-        if email_notification_active:
-            user.email_notification_active = bool(email_notification_active)
 
         try:
             user.save()
@@ -211,71 +199,126 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     @action(methods=['get'], detail=True,
             url_path='profile', url_name='get_profile')
     def get_job_profile(self, request, pk):
-        profile = Profile.objects.filter(user=self.get_object()).first()
-        return Response(data=ProfileSerializer(profile, context={'request': request}).data,
+        pro = Profile.objects.filter(user=self.get_object()).first()
+        return Response(data=ProfileSerializer(pro, context={'request': request}).data,
                         status=status.HTTP_200_OK)
 
-    @get_job_profile.mapping.post
-    def create_update_job_profile(self, request, pk):
-        profile = Profile.objects.filter(job_seeker=self.get_object()).first()
-        stt = None
+    @get_job_profile.mapping.patch
+    def update_profile(self, request, pk):
+        # pro = Profile.objects.filter(user=User.objects.get(pk=pk)).first()
+        # pro = request.pro
+        pro = Profile.objects.filter(user=self.get_object()).first()
+        data = request.data
 
-        if profile:
-            # update
-            serializer = ProfileSerializer(profile, data=request.data, partial=True)
-            stt = status.HTTP_200_OK
+        full_name = data.get('full_name')
+        phone_number = data.get('phone_number')
+        gender = data.get('gender')
+        date_of_birth = data.get('date_of_birth')
+        address_detail = data.get('address_detail')
+        skills = data.get('skills')
+
+        if full_name:
+            pro.full_name = full_name
+
+        if phone_number:
+            pro.phone_number = phone_number
+
+        if gender:
+            pro.gender = gender
+
+        if date_of_birth:
+            pro.date_of_birth = date_of_birth
+
+        if address_detail:
+            pro.address_details = address_detail
+
+        if skills:
+            pro.skills = skills
+
+        try:
+            pro.save()
+        except():
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            # create
-            serializer = ProfileSerializer(data=request.data)
-            stt = status.HTTP_201_CREATED
-        if serializer.is_valid(raise_exception=True):
-            # save
-            serializer.save()
-            return Response(data=serializer.data, status=stt)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=ProfileSerializer(pro, context={'request': request}).data,
+                            status=status.HTTP_200_OK)
 
     @action(methods=['get'], detail=True,
-            url_path='company', url_name='get_company')
+            url_path='company')
     def get_company(self, request, pk):
         company = Employer.objects.filter(recruiter=self.get_object()).first()
         return Response(data=EmployerSerializer(company, context={'request': request}).data,
                         status=status.HTTP_200_OK)
 
-    @get_company.mapping.post
-    def create_or_update_company(self, request, pk):
-        company = Employer.objects.filter(recruiter=self.get_object()).first()
-        stt = None
+    # @get_company.mapping.post
+    # def create_or_update_company(self, request, pk):
+    #     company = Employer.objects.filter(recruiter=self.get_object()).first()
+    #     stt = None
+    #     data = request.data
+    #     data['recruitment'] = self.get_object().id
+    #     if company:
+    #         # update
+    #         serializer = EmployerSerializer(company, data=data, partial=True)
+    #         stt = status.HTTP_200_OK
+    #     else:
+    #         # create
+    #         serializer = EmployerSerializer(data=data)
+    #         stt = status.HTTP_201_CREATED
+    #     if serializer.is_valid(raise_exception=True):
+    #         # save
+    #         serializer.save()
+    #         return Response(data=serializer.data, status=stt)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['get'], detail=True,
+            url_path='cv')
+    def get_cv(self, request, pk):
+        company = CVOnline.objects.filter(user=self.get_object()).first()
+        return Response(data=CVOnlineSerializer(company, context={'request': request}).data,
+                        status=status.HTTP_200_OK)
+
+    @get_cv.mapping.post
+    def update_cv(self, request, pk):
+        company = CVOnline.objects.filter(user=self.get_object()).first()
         data = request.data
-        data['recruitment'] = self.get_object().id
-        if company:
-            # update
-            serializer = EmployerSerializer(company, data=data, partial=True)
-            stt = status.HTTP_200_OK
+
+        cv = data.get('cv')
+        title = data.get('title')
+
+        if cv:
+            company.cv = cv
+
+        if title:
+            company.title = title
+
+        try:
+            company.save()
+        except():
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            # create
-            serializer = EmployerSerializer(data=data)
-            stt = status.HTTP_201_CREATED
-        if serializer.is_valid(raise_exception=True):
-            # save
-            serializer.save()
-            return Response(data=serializer.data, status=stt)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=ProfileSerializer(company, context={'request': request}).data,
+                            status=status.HTTP_200_OK)
 
 
 class RecruitmentViewSet(viewsets.ViewSet, generics.ListAPIView,
                          generics.RetrieveAPIView,
                          generics.CreateAPIView,
-                         generics.UpdateAPIView):
+                         generics.UpdateAPIView, generics.DestroyAPIView):
     pagination_class = BasePagination
+    queryset = Recruitment.objects.all()
     serializer_class = RecruitmentSerializer
 
     def get_permissions(self):
-        if self.action in ['update', 'partial_update', 'destroy']:
-            return [perms.JobPostOwnerPerms()]
+        if self.action in ['update', 'partial_update']:
+            return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
 
     def get_queryset(self):
         queryset = self.queryset
+
+        q = self.request.query_params.get('q')
+        if q is not None:
+            queryset = Recruitment.objects.filter(title__icontains=q)
 
         career_id = self.request.query_params.get('career_id')
         if career_id:
@@ -287,16 +330,11 @@ class RecruitmentViewSet(viewsets.ViewSet, generics.ListAPIView,
 
         salary_id = self.request.query_params.get('salary_id')
         if salary_id:
-            queryset = queryset.filter(salary_id=salary_id)
+            queryset = self.objects.filter('salary_id')
 
         experience_id = self.request.query_params.get('experience_id')
         if experience_id:
             queryset = queryset.filter(experience_id=experience_id)
-
-        kw = self.request.query_params.get('kw')
-        if kw:
-            queryset = queryset.filter(title__icontains=kw)
-
         return queryset
 
 
@@ -312,8 +350,8 @@ class CommentViewSet(viewsets.ViewSet, generics.DestroyAPIView, generics.UpdateA
 
     def get_permissions(self):
         if self.action in ['update', 'partial_update', 'destroy']:
-            return [perms.IsRecruiterUser()]
-        return [permissions.IsAuthenticated()]
+            return [permissions.IsAuthenticated()]
+        return [permissions.AllowAny()]
 
     def destroy(self, request, *args, **kwargs):
         if request.user == self.get_object().user:
@@ -325,5 +363,102 @@ class CommentViewSet(viewsets.ViewSet, generics.DestroyAPIView, generics.UpdateA
         if request.user == self.get_object().user:
             return super().partial_update(request, *args, **kwargs)
         return Response(status=status.HTTP_403_FORBIDDEN)
+
+
+class ProfileViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.UpdateAPIView):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializer
+
+    def get_permissions(self):
+        if self.action in ['experience', 'education']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.AllowAny()]
+
+    @action(methods=['get'], detail=True, url_path='experience')
+    def get_experience(self, request, pk):
+        experience = ExperienceProfile.objects.filter(profile=self.get_object()).first()
+        return Response(data=ExperienceProfileSerializer(experience,
+                                                         context={'request': request}).data, status=status.HTTP_200_OK)
+
+    @get_experience.mapping.patch
+    def update_experience(self, request, pk):
+        experience = ExperienceProfile.objects.filter(profile=self.get_object()).first()
+        data = request.data
+
+        job = data.get('job')
+        position = data.get('position')
+        time_start = data.get('time_start')
+        time_end = data.get('time_end')
+        company_name = data.get('company_name')
+        description = data.get('description')
+
+        if job:
+            experience.job = job
+
+        if position:
+            experience.position = position
+
+        if time_start:
+            experience.time_start = time_start
+
+        if time_end:
+            experience.time_end = time_end
+
+        if company_name:
+            experience.company_name = company_name
+
+        if description:
+            experience.description = description
+
+        try:
+            experience.save()
+        except():
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response(data=self.serializer_class(experience, context={'request': request}).data,
+                            status=status.HTTP_200_OK)
+
+    @action(methods=['get'], detail=True, url_path='education')
+    def get_education(self, request, pk):
+        edu = EducationProfile.objects.filter(profile=self.get_object()).first()
+        return Response(data=EducationProfileSerializer(edu,
+                                                        context={'request': request}).data, status=status.HTTP_200_OK)
+
+    @get_education.mapping.patch
+    def update_education(self, request, pk):
+        edu = EducationProfile.objects.filter(profile=self.get_object()).first()
+        data = request.data
+
+        degree = data.get('degree')
+        major = data.get('major')
+        time_start = data.get('time_start')
+        time_completed = data.get('time_completed')
+        description = data.get('description')
+
+        if degree:
+            edu.degree = degree
+
+        if major:
+            edu.major = major
+
+        if time_start:
+            edu.time_start = time_start
+
+        if time_completed:
+            edu.time_completed = time_completed
+
+        if description:
+            edu.description = description
+
+        try:
+            edu.save()
+        except():
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response(data=self.serializer_class(edu, context={'request': request}).data,
+                            status=status.HTTP_200_OK)
+
+
+
 
 

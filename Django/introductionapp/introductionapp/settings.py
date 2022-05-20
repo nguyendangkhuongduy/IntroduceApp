@@ -85,6 +85,13 @@ TEMPLATES = [
     },
 ]
 
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_USE_TLS = True
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_HOST_USER = ''
+# EMAIL_HOST_PASSWORD = ''
+# EMAIL_PORT = 587
+
 WSGI_APPLICATION = 'introductionapp.wsgi.application'
 
 
@@ -94,7 +101,7 @@ WSGI_APPLICATION = 'introductionapp.wsgi.application'
 DATABASES = {
     'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'jobdb',
+            'NAME': 'duyjob',
             'USER': 'root',
             'PASSWORD': 'duy24012001duy',
             'HOST': ''
@@ -108,13 +115,19 @@ CKEDITOR_UPLOAD_PATH = "candidate/"
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        # 'rest_framework_social_oauth2.authentication.SocialAuthentication',
     ),
-
+    #
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
-    ]
-}
+    ],
 
+  # 'DEFAULT_PARSER_CLASSES': (
+  #       'rest_framework.parsers.FormParser',
+  #       'rest_framework.parsers.MultiPartParser'
+  #    )
+}
+#
 OAUTH2_PROVIDER = {
     'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore',
 }
@@ -163,8 +176,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 OAUTH2_INFO = {
-    "client_id": "bDmCwJUZ89Gu1Mc06AqRdbTUmc817nKj3Wb3Tjt5",
-    "client_secret": "7kCRLdlYqSlTBgVuXSwdqInxJ6MZTZuqTXKk1uG6gL49EzZWRjjSwTIZ08X35XK02RnLqNFa5HEH2QmXqNo6CHOlb9NH0KE18U1OAt05FOot8nqYkfvHTZRYxcAhyu8W",
+    "client_id": "LfTgI2mdzipoCw7XdEnmkx6A52plcoerhW46T6b7",
+    "client_secret": "MKjrKaM16mTwGnMkjOSbED836LU8qu0fiDr0ux7bPjWRiPOd6beWqWniAPSCKrjHriPmXk1xFiZfQWKwSAZeR4j1YmY9hO6wlin4sttfASAs6wQPgISk6YOT5vMfGaPu",
 }
 
 

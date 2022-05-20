@@ -1,19 +1,41 @@
 # from rest_framework import serializers
-from rest_framework import serializers
+# from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
 from .models import Employer, Recruitment, User, Address, Experience, Salary, Career, Tag, Action, Rating,\
-    ViewEmployer, ViewProfile, Profile, University, EducationProfile, ExperienceProfile, CVOnline, Comment
+    ViewEmployer, ViewProfile, Profile, University, EducationProfile, CVOnline, Comment, ExperienceProfile
 from django.contrib.auth.models import Group
 from . import perms
 
 
-class GroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Group
-        fields = ['id', 'name']
-        extra_kwargs = {
-            'name': {'validators': []},
-        }
+# class EmployerPermSerializer(ModelSerializer):
+#     # class Meta:
+#     #     model = User
+#     #     fields = ['id', 'first_name', 'last_name', 'email', 'username', 'password', 'avatar']
+#     #     extra_kwargs = {
+#     #         'password': {
+#     #             'write_only': True
+#     #         }, 'avatar': {
+#     #             'write_only': True
+#     #         }
+#     #     }
+#     class Meta:
+#         model = User
+#         fields = ["id", "first_name", "last_name", "username", "groups", "password", "email", "avatar", "date_joined"]
+#
+#         extra_kwargs = {
+#             'password': {'write_only': 'true'}
+#         }
+#
+#     def create(self, validated_data):
+#         user = User(**validated_data)
+#         user.set_password(user.password)
+#         user.Is_Employer = True
+#         group = Group.objects.get(pk=2)
+#         user.save()
+#         user.groups.add(group)
+#         employer = Employer(user=user)
+#         employer.save()
+#         return user
 
 
 # Action
@@ -29,44 +51,37 @@ class RatingSerializer(ModelSerializer):
         fields = ["id", "rating", "created_date"]
 
 
-class UserSerializer(serializers.ModelSerializer):
-    groups = GroupSerializer(many=True)
+class UserSerializer(ModelSerializer):
+
+    avatar = SerializerMethodField()
 
     def get_avatar(self, obj):
-        request = self.context['request']
-        if obj.avatar and not obj.avatar.name.startswith("/static"):
-            path = '/static/%s' % obj.avatar.name
-
+        request = self.context.get('request')
+        name = obj.avatar.name
+        if name.startswith("static/"):
+            path = '/%s' % name
+        else:
+            path = '/static/%s' % name
+        if request:
             return request.build_absolute_uri(path)
+        else:
+            return None
 
     class Meta:
         model = User
-        fields = ["id", "first_name", "last_name", "username","groups", "password", "email", "avatar", "date_joined"]
+        fields = ["id", "first_name", "last_name", "username", "password", "email", "avatar", "date_joined", "Role"]
 
         extra_kwargs = {
             'password': {'write_only': 'true'}
         }
 
-    # def create(self, validated_data):
-    #     user = User(**validated_data)
-    #     user.set_password(user.password)
-    #     user.save()
-    #
-    #     return user
-
     def create(self, validated_data):
-        groups = validated_data.pop('groups')
-        g = groups[0]
-        group = Group.objects.filter(name=g.get('name')).first()
-
-        user = User.objects.create(**validated_data)
-        if not group.name == perms.recruiter_role:
-            user.is_active = True
+        user = User(**validated_data)
         user.set_password(user.password)
-        user.groups.add(group)
         user.save()
 
         return user
+
 
 
 class CommentSerializer(ModelSerializer):
@@ -121,7 +136,7 @@ class TagSerializer(ModelSerializer):
 
 
 class EmployerSerializer(ModelSerializer):
-    image = serializers.SerializerMethodField()
+    image = SerializerMethodField()
 
     address = AddressSerializer()
 
@@ -139,13 +154,24 @@ class EmployerSerializer(ModelSerializer):
 
     class Meta:
         model = Employer
-        fields = ["id", "name", "address", "description", "phone_number", "email", "image", "created_date", "active"]
+        fields = ["id", "name", "address", "description", "phone_number",
+                  "email", "image", "created_date", "active"]
 
 
 class EmployerDetailsSerializer(EmployerSerializer):
+    rating = SerializerMethodField()
+
+    def get_rater(self, employer):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            r = employer.employer_rater.filter(recruiter=request.user).first()
+            if r:
+                return r.rating
+        return -1
+
     class Meta:
         model = EmployerSerializer.Meta.model
-        fields = EmployerSerializer.Meta.fields
+        fields = EmployerSerializer.Meta.fields + ['rating']
 
 
 class RecruitmentSerializer(ModelSerializer):
@@ -182,14 +208,64 @@ class RecruitmentSerializer(ModelSerializer):
 
 # Ung vien
 class ProfileSerializer(ModelSerializer):
+    user = UserSerializer()
+    address = AddressSerializer()
+
     class Meta:
         model = Profile
         fields = "__all__"
 
 
-class EducationProfileSerializer(ModelSerializer):
+class ExperienceProfileSerializer(ModelSerializer):
+    profile = ProfileSerializer()
+
     class Meta:
-        module = EducationProfile
+        model = ExperienceProfile
         fields = "__all__"
+
+
+class UniversitySerializer(ModelSerializer):
+    class Meta:
+        model = University()
+        fields = "__all__"
+
+
+class EducationProfileSerializer(ModelSerializer):
+    profile = ProfileSerializer()
+    university_name = UniversitySerializer()
+
+    class Meta:
+        model = EducationProfile
+        fields = "__all__"
+
+
+class CVOnlineSerializer(ModelSerializer):
+    cv = SerializerMethodField()
+    profile = ProfileSerializer()
+    user = UserSerializer()
+
+    def get_cv(self, vv):
+        request = self.context.get("request")
+        name = vv.cv.name
+        if name.startswith("static/"):
+            path = '/%s' % name
+        else:
+            path = '/static/%s' % name
+        if request:
+            return request.build_absolute_uri(path)
+        else:
+            return None
+
+    class Meta:
+        model = CVOnline
+        fields = "__all__"
+
+
+
+
+
+
+
+
 
 

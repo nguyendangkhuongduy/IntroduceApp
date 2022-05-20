@@ -5,9 +5,9 @@ import Apis, { endpoints } from "../configs/Apis"
 import FontRecruitment from "../layout/FontRecruitment"
 
 
-
 export default function Home () {
     const [recruitment, setRecruitment] = useState([])
+    const [change, SetChange] = useState(1)
 
 
     useEffect(() => {
@@ -18,10 +18,12 @@ export default function Home () {
             } catch(err) {
                 console.error(err)
             }      
-        } 
+        }
+         
         loadRecruitment()
+        SetChange(recruitment.count)
         
-    }, [])
+    }, [change])
 
     return (
         <>

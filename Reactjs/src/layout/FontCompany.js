@@ -13,11 +13,13 @@ export default function FontCompany(props) {
                 </Link>
                 
                 <Card.Body>
-                    <Card.Title>{props.obj.title}</Card.Title>
+                    <Card.Title>Job:{props.obj.title}</Card.Title>
                     <Card.Text>
                         Phone: {props.obj.phone_number}
                         <br></br>
                         Date: {props.obj.created_date}
+                        <br></br>
+                        Quantity: {props.obj.number}
                     </Card.Text>
                 </Card.Body>
             </Card>

@@ -1,17 +1,49 @@
+import { Button, Form } from "react-bootstrap"
 import { useEffect } from "react"
 import { useState } from "react"
 import { Col, Row, Spinner, Image, Badge } from "react-bootstrap"
-import { Link, useParams } from "react-router-dom"
+import { useSelector } from "react-redux"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import Apis, { endpoints } from "../configs/Apis"
 
 
 
 export default function RecruitmentDetails () {
 
-
+    let user  = useSelector(state => state.user.user)
     const [recruitment, SetRecruitment] = useState(null)
+    const [deletee, SetDelete] = useState(null)
+    const nav = useNavigate()
 
     let {recruitmentId} = useParams()
+
+    const deleteRecruitment = async (event) => {
+        event.preventDefault()
+
+        try {
+            let delete_recruitment = async () => {
+                try {
+                    let res = await Apis.delete(endpoints['delete_recruitment'](recruitmentId))
+                    SetDelete(res.data)
+
+ 
+                } catch (err) {
+                    console.error(err)
+                }
+            }
+
+           
+            SetRecruitment(recruitment)
+            delete_recruitment()
+            nav(`/employer`)
+           
+        } catch (err) {
+            console.info(err)
+        }
+
+    }
+
+
 
     useEffect(() =>{
         let loadRecruitment = async () => {
@@ -22,9 +54,19 @@ export default function RecruitmentDetails () {
                 console.error(err)
             }
         }
-
         loadRecruitment()
     }, [])
+
+    let u = ""
+    if(user !== null && user !== undefined && (user.Role == "2" || user.Role == "3")) {
+        u = <>
+        <Form onSubmit={deleteRecruitment}>
+            <Button variant="primary" type="submit">
+                    Delete
+                </Button>
+        </Form>
+        </> 
+    }
 
     
     
@@ -59,6 +101,8 @@ export default function RecruitmentDetails () {
                     <p>Phone: {recruitment.phone_number}</p>
                     <p>Date join: {(recruitment.created_date)}</p>
                     <p>Date update: {recruitment.updated_date}</p>
+                    <p>Quantity: {recruitment.number}</p>
+                    {u}
                     <p>
                         {recruitment.tags.map(t => <Badge style={{backgroundColor: "blue"}} bg="secondary">{t.name}</Badge>)}
                     </p>
@@ -66,6 +110,7 @@ export default function RecruitmentDetails () {
                     <p>Email: {recruitment.employer.email}</p>
                     <p>Phone: {recruitment.employer.phone_number}</p>
                     <p>Join: {recruitment.employer.created_date}</p>
+                    
 
 
                     <p></p>
